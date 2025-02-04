@@ -1,0 +1,243 @@
+Models
+class Channel(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    name = Required(str)
+    orders = Set('Order')
+    products = Set('Product')
+    channel_uid = Required(str, unique=True)
+    #dispatch_requests = Set(DispatchRequest)
+    #inventoryupdaterequests = Set(InventoryUpdateRequest)
+    merchant_uid = Required(str)
+    country = Optional(str)
+    amzn_authorization_code = Optional(str, unique=True)
+    amzn_merchant_id = Optional(str, unique=True)
+    shop_url = Optional(str, unique=True)
+    channel_type = Optional(str)
+    created_at = Required(datetime)
+    updated_at = Required(datetime)
+
+    @property
+    def all_orders_dict(self):
+        allOrders = self.orders.select(lambda o: o.isDispatched == False)
+        orders = []
+        for order in allOrders:
+            #print("called ", json.dumps(order))
+            if not order.isDispatched:
+                orders.append(order.to_dict)
+        return orders
+
+    @property
+    def all_products_dict(self):
+
+        all_products = []
+        for product in self.products:
+            # print(product.to_dict)
+            all_products.append(product.to_dict)
+
+        return all_products
+
+    @property
+    def to_dict(self):
+        channel = {}
+        channel['name'] = self.name
+        channel['channel_uid'] = self.channel_uid
+        channel['merchant_uid'] = self.merchant_uid
+        channel['country'] = self.country
+        channel['amzn_authorization_code'] = self.amzn_authorization_code
+        channel['amzn_merchant_id'] = self.amzn_merchant_id
+        channel['shop_url'] = self.shop_url
+        channel['created_at'] = self.created_at
+        channel['updated_at'] = self.updated_at
+
+        return channel
+class DispatchRequest(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    channel = Required(Channel)
+    order_id = Required(str, max_len=200)
+    created_at = Required(str)
+    last_try_at = Required(str)
+    status = Required(bool)
+
+    # @property
+    # def all_dispatch_request_dict(self):
+    #     allOrders = self.orders.select(lambda o: o.isDispatched==False)
+    #     orders = []
+    #     for order in allOrders:
+    #         if not order.isDispatched:
+    #             orders.append(order.to_dict)
+    #     return orders
+
+    @property
+    def to_dict(self):
+        dispatch_request = {}
+        dispatch_request['id'] = self.id
+        dispatch_request['channel'] = self.channel
+        dispatch_request['order_id'] = self.order_id
+        dispatch_request['created_at'] = self.created_at
+        dispatch_request['last_try_at'] = self.last_try_at
+        dispatch_request['status'] = self.status
+        return dispatch_request
+
+
+class InventoryRequest(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    channel_uid = Required(str)
+    sku = Required(str, max_len=300)
+    item_id = Required(str, max_len=50)
+    quantity = Required(int)
+    status = Required(str, default="PENDING")
+    request_id = Optional(str)
+    feed_id = Optional(str)
+
+    created_at = Required(datetime)
+    updated_at = Required(datetime)
+    
+    request_metadata = Optional(Json)
+
+    class StatusChoices:
+        PENDING = "PENDING"
+        SUCCESS = "SUCCESS"
+        IN_QUEUE = "IN_QUEUE"
+        PROCESSING = "PROCESSING"
+        IN_AMAZON_QUEUE = "IN_AMAZON_QUEUE"
+        DONE = "DONE"
+        FAILED = "FAILED"
+        WARNING = "WARNING"
+        RE_UPDATE = "RE_UPDATE"
+
+    @property
+    def to_dict(self):
+        inventory = dict()
+        inventory['id'] = self.id
+        inventory['channel_uid'] = self.channel_uid
+        inventory['sku'] = self.sku
+        inventory['item_id'] = self.item_id
+        inventory['quantity'] = self.quantity
+        inventory['status'] = self.status
+        inventory['request_id'] = self.request_id
+        inventory['created_at'] = self.created_at.__str__()
+        inventory['updated_at'] = self.updated_at.__str__()
+        inventory['request_metadata'] = self.request_metadata if self.request_metadata is not None else {}
+        return inventory
+
+class InventoryRequest(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    channel_uid = Required(str)
+    sku = Required(str, max_len=300)
+    item_id = Required(str, max_len=50)
+    quantity = Required(int)
+    status = Required(str, default="PENDING")
+    request_id = Optional(str)
+    feed_id = Optional(str)
+
+    created_at = Required(datetime)
+    updated_at = Required(datetime)
+    
+    request_metadata = Optional(Json)
+
+    class StatusChoices:
+        PENDING = "PENDING"
+        SUCCESS = "SUCCESS"
+        IN_QUEUE = "IN_QUEUE"
+        PROCESSING = "PROCESSING"
+        IN_AMAZON_QUEUE = "IN_AMAZON_QUEUE"
+        DONE = "DONE"
+        FAILED = "FAILED"
+        WARNING = "WARNING"
+        RE_UPDATE = "RE_UPDATE"
+
+    @property
+    def to_dict(self):
+        inventory = dict()
+        inventory['id'] = self.id
+        inventory['channel_uid'] = self.channel_uid
+        inventory['sku'] = self.sku
+        inventory['item_id'] = self.item_id
+        inventory['quantity'] = self.quantity
+        inventory['status'] = self.status
+        inventory['request_id'] = self.request_id
+        inventory['created_at'] = self.created_at.__str__()
+        inventory['updated_at'] = self.updated_at.__str__()
+        inventory['request_metadata'] = self.request_metadata if self.request_metadata is not None else {}
+        return inventory
+class Order(db.Entity):
+   
+    id = PrimaryKey(int, auto=True)
+    channel_order_id = Required(str, max_len=2000)
+    channel = Required(Channel)
+    payment_status = Required(str, max_len=3000)
+    seller_info = Optional(str)
+    date = Required(str)
+    shipping_address = Required(Json)
+    items = Required(Json)
+    payment_method = Required(str)
+    buyer_name = Optional(str)
+    buyer_email = Optional(str)
+    currency = Required(str)
+    total = Required(str)
+    isDispatched = Required(bool)
+
+
+    @property
+    def all_orders_dict(self):
+        allOrders = self.orders.select(lambda o: o.isDispatched==False)
+        orders = []
+        for order in allOrders:
+            if not order.isDispatched:
+                orders.append(order.to_dict)
+        return orders
+
+
+
+
+    @property
+    def to_dict(self):
+        order = {}
+        order['id'] = self.id
+        order['mye_order_id'] = self.id
+        order['channel_order_id'] = self.channel_order_id
+        order['payment_status'] = self.payment_status
+        order['seller_info'] = self.seller_info
+        order['date'] = self.date
+        order['shipping_address'] = self.shipping_address
+        order['items'] = self.items
+        order['payment_method'] = self.payment_method
+        order['buyer_name'] = self.buyer_name
+        order['buyer_email'] = self.buyer_email
+        order['currency'] = self.currency
+        order['total'] = self.total
+        return order
+class Product(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    product_id = Required(str)
+    name = Required(str)
+    sku = Required(str)
+    fba_status = Required(bool, default=False)
+    channel = Required(Channel)
+    created_at = Required(datetime)
+    updated_at = Required(datetime)
+
+    @property
+    def to_dict(self):
+        return {"id": self.product_id, "sku": self.sku, "name": self.name, "channel_type": self.channel.channel_type,
+                "fba_status": self.fba_status}
+class Token(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    channel_uid = Required(str)
+    access_token = Required(str, max_len=3000)
+    refresh_token = Required(str, max_len=3000)
+    expiry = Required(int)
+    created_at = Required(datetime)
+    updated_at = Required(datetime)
+
+    @property
+    def to_dict(self):
+        token ={}
+        token['channel_uid'] = self.channel_uid
+        token['access_token'] = self.access_token
+        token['refresh_token'] = self.refresh_token
+        token['expiry'] = self.expiry
+        token['created_at'] = self.created_at
+        token['updated_at'] = self.updated_at
+
+        return token

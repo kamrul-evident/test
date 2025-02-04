@@ -1,0 +1,141 @@
+App: Location
+---------------------------------------------------------------
+class Location(TimestampMixin, models.Model):
+    name=models.CharField(max_length=256)
+    address=models.CharField(max_length=256, blank=True)
+    post_code=models.CharField(max_length=30, blank=True)
+    country=models.CharField(max_length=128, blank=True)
+    company_uid=models.CharField(max_length=128)
+
+    # objects = SoftDeleteManager()
+    class Meta:
+        unique_together = ['name', 'company_uid']
+
+class Location_mapping(TimestampMixin, models.Model):
+    channel_inventory_location=models.ForeignKey(Location, on_delete=models.CASCADE)
+    channel_uid=models.CharField(max_length=128)
+    company_uid=models.CharField(max_length=128)
+    inventory_sync = models.BooleanField(default=True)
+    
+    # objects = SoftDeleteManager()
+    class Meta:
+        unique_together = ['company_uid', 'channel_uid']
+
+App: Mapping
+---------------------------------------------------------------
+class Local_product(TimestampMixin, models.Model):
+    name = models.CharField(max_length=256)
+    sku = models.CharField(max_length=128)
+    barcode = models.CharField(max_length=256, blank=True )
+    purchase_price = models.DecimalField(max_digits=20, decimal_places=2, default=0.00 )
+    selling_price = models.DecimalField(max_digits=20, decimal_places=2, default=0.00)
+    is_composite = models.BooleanField(default=False)
+    is_child = models.BooleanField(default=False)
+    image = models.CharField(max_length=2048,validators=[URLValidator()], null=True, blank=True)
+    weight = models.DecimalField(max_digits=10, decimal_places=2, default=0.00 , blank=True )
+    height = models.DecimalField(max_digits=10, decimal_places=2, default=0.00 , blank=True)
+    width = models.DecimalField(max_digits=10, decimal_places=2, default=0.00 , blank=True)
+    depth = models.DecimalField(max_digits=10, decimal_places=2, default=0.00 , blank=True)
+    company_uid = models.CharField(max_length=128)
+    stock_notification = models.BooleanField(default=False)
+    
+    # objects = SoftDeleteManager()
+    class Meta:
+        unique_together = ['sku', 'company_uid']
+
+
+class Remote_product(TimestampMixin, models.Model):
+    remote_product_id = models.CharField(max_length=128)
+    remote_product_name = models.TextField(max_length=2048,  null=True, blank=True)
+    remote_product_description = models.TextField(max_length=2048,  null=True, blank=True)
+    image = models.CharField(max_length=2048,validators=[URLValidator()], null=True, blank=True)
+    remote_product_sku = models.CharField(max_length=128)
+    remote_product_title = models.CharField(max_length=300, blank=True)
+    channel_uid = models.CharField(max_length=128)
+    company_uid = models.CharField(max_length=128)
+    fba_status = models.BooleanField(default=False)
+    sync_inventory = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ('remote_product_sku', 'channel_uid', 'company_uid')
+
+    # objects = SoftDeleteManager()
+
+class Mapping(TimestampMixin, models.Model):
+    remote_product = models.OneToOneField(Remote_product, on_delete=models.CASCADE,
+                                          related_name='mapped_remote_products')
+    # remote_product_sku=models.CharField(max_length=100 , blank=True)
+    local_product = models.ForeignKey(Local_product, on_delete=models.CASCADE, related_name='mapped_local_products')
+    # local_product_sku=models.CharField(max_length=100 , blank=True)
+    channel_uid = models.CharField(max_length=128)
+    company_uid = models.CharField(max_length=128)
+
+    # objects = SoftDeleteManager()
+
+# class CompositeLocalProduct(TimestampMixin, models.Model):
+#     composite_parent_product = models.OneToOneField(Local_product, on_delete=models.CASCADE, related_name='composite_product')
+#     composite_child_products = ArrayField(models.IntegerField(blank=True))
+#     company_uid = models.CharField(max_length=128)
+
+    # objects = SoftDeleteManager()
+
+class CompositeProduct(TimestampMixin, models.Model):
+    parent_product = models.ForeignKey(Local_product, on_delete=models.CASCADE, related_name='parent_local_product')
+    child_product = models.ForeignKey(Local_product, on_delete=models.CASCADE, related_name='child_local_product')
+    quantity = models.IntegerField(default=1 )
+    company_uid = models.CharField(max_length=128)
+
+App: Stock
+---------------------------------------------------------------
+class Stock(TimestampMixin, models.Model):
+    local_product = models.ForeignKey(Local_product, on_delete=models.CASCADE , related_name='stock_local_product')
+    stock_level = models.PositiveIntegerField(default=0)
+    in_open = models.PositiveIntegerField(default=0)
+    minimum_quantity = models.PositiveIntegerField(default=0)
+    location = models.PositiveIntegerField()
+    company_uid = models.CharField(max_length=128)
+
+    # objects = SoftDeleteManager()
+
+    class Action : 
+        ADDITION = "ADDITION"
+        SUBTRACTION = "SUBTRACTION"
+        FULL_STOCK = "FULL_STOCK"
+        NEW_ORDER_ITEM = "NEW_ORDER_ITEM"
+        CANCEL_ORDER_ITEM = "CANCEL_ORDER_ITEM"
+        DISPATCH_ORDER_ITEM = "DISPATCH_ORDER_ITEM"
+        RETURN = "RETURN"
+    class Meta:
+        indexes=[
+            models.Index(fields=['location','company_uid'])
+        ]
+
+class InventoryRequestStock(models.Model):
+    uuid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    data = models.JSONField() #sku and quantity
+    status = models.CharField(max_length=36, default = "PENDING")
+    location = models.PositiveIntegerField(null=True, blank=True)
+    company_uid = models.CharField(max_length=128)
+    batch_metadata = models.JSONField(null=True, blank=True) #box number, shipment details, web 
+    dispatch_by = models.UUIDField(null=True)
+    stock_procced_at = models.DateTimeField(null=True)
+    created_at = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, auto_now_add=False)
+
+    # objects = SoftDeleteManager()
+
+class StockRequestHistory( models.Model):
+    local_product = models.ForeignKey(Local_product, on_delete=models.CASCADE, blank=True, related_name='stock_request_histories')
+    stock_location = models.IntegerField(blank=True, null=True)
+    company_uid = models.CharField(max_length=36)
+    stock_operation = models.CharField(max_length=128, blank=True)
+    stock_quantity =  models.IntegerField(default=0, null=True)
+    previous_stock = models.IntegerField(default=0)
+    current_stock = models.IntegerField(default=0)
+    previous_in_open = models.IntegerField(default=0)
+    current_in_open = models.IntegerField(default=0)
+    updated_by = models.CharField(max_length=128, blank=True)
+    created_at = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, auto_now_add=False)
+
+    # objects = SoftDeleteManager()

@@ -1,0 +1,105 @@
+App: orders
+
+class Order(models.Model):
+    channel_order_id=models.CharField(max_length=50, db_index=True)
+    payment_status=models.CharField(max_length=50 , blank=True)
+    payment_method=models.CharField(max_length=50 , blank=True)
+    purchase_date=models.DateTimeField(auto_now=False, auto_now_add=False)
+    currency=models.CharField(max_length=50 ,blank=True)
+    total=models.DecimalField(max_digits=50, decimal_places=2, blank=True)
+    channel_uid=models.CharField(max_length=128, db_index=True)
+    company_uid=models.CharField(max_length=128, db_index=True)
+    market_place=models.CharField(max_length=50 , blank=True , null=True)
+    dispatch_status = models.CharField(max_length=20)
+    dispatch_identifier = models.CharField(max_length=128, db_index=True, blank=True)
+    dispatched_by = models.CharField(max_length=128, db_index=True, blank=True)
+    dispatched_at = models.DateTimeField(auto_now=False, auto_now_add=False, blank=True, null=True)
+    shipped_at =  models.DateTimeField(auto_now=False, auto_now_add=False,  blank=True, null=True , default = None)
+    order_meta = models.JSONField(blank=True, null = True)
+    createdAt = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True, auto_now_add=False)
+
+    class DispatchStatus:
+        OPEN_ORDER = "OPEN_ORDER"
+        CLOSED = "CLOSED"
+        DISPATCHED = "DISPATCHED"
+        FAILED = "FAILED"
+        CANCELLED = "CANCELLED"
+        PENDING = "PENDING"
+
+    def get_order_items_sku_list(self):
+        return list(self.order_items.values_list('remote_sku', flat=True))
+    
+    def get_order_item_sku_quantity(self):
+        return list(self.order_items.values('remote_sku', 'quantity', 'channel_uid', 'company_uid'))
+
+class OrderItem(models.Model):
+    order=models.ForeignKey(Order, on_delete=models.CASCADE, related_name='order_items')
+    remote_sku = models.CharField(max_length=128, blank=True, null=True)
+    local_sku = models.CharField(max_length=128 ,  blank=True, null=True, default = None)
+    quantity = models.PositiveIntegerField(default=0)
+    price = models.DecimalField(max_digits=128, decimal_places=2, blank=True)
+    total_amount = models.DecimalField(max_digits=56, decimal_places=2, blank=True)
+    channel_uid=models.CharField(max_length=128)
+    company_uid=models.CharField(max_length=128)
+    position_item_ids =  ArrayField(models.CharField(max_length=256), blank=True , null=True, default=list)
+    
+    picked_sku = models.CharField(max_length=128 ,  blank=True, null=True, default = None)
+    picked_at=models.DateTimeField(auto_now=False, auto_now_add=False,  blank=True, null=True , default = None)
+    picked_item_type =models.CharField(max_length=128,  blank=True, null=True ,  default = None)
+    packed_sku= models.CharField(max_length=128,  blank=True, null=True ,  default = None)
+    packed_at= models.DateTimeField(auto_now=False, auto_now_add=False,  blank=True, null=True , default = None)
+    
+    
+    createdAt = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True, auto_now_add=False)
+    
+    
+    class PickedItemType : 
+        EXACT_ITEM = "EXACT_ITEM"
+        EXCHABGE_ITEM = "EXCHANGE_ITEM"
+        
+class OrderShippingAddress(models.Model):
+    order=models.OneToOneField(Order, on_delete=models.CASCADE, related_name='order_shipping_address')
+    buyer_name = models.CharField(max_length=1024 , blank=True)
+    address1 = models.CharField(max_length=1024 , blank=True)
+    address2 = models.CharField(max_length=1024 , blank=True)
+    city = models.CharField(max_length=1024 , blank=True)
+    state = models.CharField(max_length=1024 , blank=True)
+    post_code = models.CharField(max_length=1024 , blank=True)
+    country = models.CharField(max_length=1024, blank=True)
+    phone = models.CharField(max_length=1024 , blank=True)
+    reference_id = models.CharField(max_length=128 , default=None, blank=True, null=True)
+    email = models.CharField(max_length=1024 , default=None, blank=True, null=True)
+    createdAt = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updatedAt = models.DateTimeField(auto_now=True, auto_now_add=False)
+
+    def save(self, *args, **kwargs):
+        self.address1 = encrypt_value(getattr(self, 'address1', None))
+        self.address2 = encrypt_value(getattr(self, 'address2', None))
+        self.city = encrypt_value(getattr(self, 'city', None))
+        self.state = encrypt_value(getattr(self, 'state', None))
+        self.post_code = encrypt_value(getattr(self, 'post_code', None))
+        self.country = encrypt_value(getattr(self, 'country', None))
+        self.phone = encrypt_value(getattr(self, 'phone', None))
+        self.buyer_name = encrypt_value(getattr(self, 'buyer_name', None))
+        self.email = encrypt_value(getattr(self, 'email', None))
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def from_db(cls, db, field_names, values):
+        try:
+            instance = super().from_db(db, field_names, values)
+            instance.address1 = decrypt_value(instance.address1)
+            instance.address2 = decrypt_value(instance.address2)
+            instance.city = decrypt_value(instance.city)
+            instance.state = decrypt_value(instance.state)
+            instance.post_code = decrypt_value(instance.post_code)
+            instance.country = decrypt_value(instance.country)
+            instance.phone = decrypt_value(instance.phone)
+            instance.email = decrypt_value(instance.email)
+            instance.buyer_name = decrypt_value(instance.buyer_name)
+            return instance
+        except Exception:
+            return super().from_db(db, field_names, values)
+    

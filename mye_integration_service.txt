@@ -1,0 +1,76 @@
+app: channel
+class Channel(models.Model):
+    name=models.CharField(max_length=128)
+    channel_uid=models.CharField(max_length=128, default="APPLIED")
+    company_uid=models.CharField(max_length=128)
+    channel_type=models.CharField(max_length=20)
+    channel_state=models.CharField(max_length=30)
+    shop_url = models.CharField(max_length=256 , blank=True)
+    country = models.CharField(max_length=128 , blank=True)
+    channel_max_stock = models.PositiveIntegerField(blank=True)
+    report_ref=models.JSONField(blank=True , null=True)
+    report_sorted_by=models.CharField(max_length=128,blank=True, null=True)
+    is_authorized = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, auto_now_add=False)
+    expires_on = models.DateTimeField(auto_now=False, auto_now_add=False, null=True)
+    channel_metadata = models.JSONField(blank=True , null=True)
+    order_sync=models.BooleanField(default=None,null=True)
+    inventory_sync=models.BooleanField(default=None,null=True)
+    # report_ref_column = models.JSONField(blank=True)
+
+    class ChannelState:
+        ACTIVE = "ACTIVE"
+        DEACTIVE = "DEACTIVE"
+        FAILED = "FAILED"
+        PROCESSING = "PROCESSING"
+    
+            headers = {"Content-Type": "application/json"}
+
+            try:
+                response = requests.delete(url, headers=headers)
+                response.raise_for_status()
+            except requests.RequestException as e:
+                print("Failed to delete user from identification service:", e)
+            
+            super().delete(*args, **kwargs)
+
+app: cloud Storage
+
+class DropBox(models.Model):
+    dropbox_user_name=models.CharField(max_length=256)
+    dropbox_email=models.CharField(max_length=128, default="APPLIED")
+    company_uid=models.CharField(max_length=128)
+    authorization_code=models.CharField(max_length=256)
+    access_token=models.CharField(max_length=256)
+    drop_account_id = models.CharField(max_length=128 , blank=True)
+    token_type = models.CharField(max_length=128 , blank=True)
+    created_at = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, auto_now_add=False)
+
+app: shipping Carrier
+
+class Carrier(models.Model):
+    uuid = models.UUIDField(default=uuid.uuid4, primary_key=True)
+    name = models.CharField(max_length=128)
+    credential_type = models.CharField(max_length=128)
+    email = models.CharField(max_length=128, blank=True, null=True)
+    client_id = models.CharField(max_length=256, blank=True, null=True)
+    client_secret = models.CharField(max_length=256, blank=True, null=True)
+    access_token = models.CharField(max_length=4096, blank=True, null=True)
+    refresh_token = models.CharField(max_length=4096, blank=True, null=True)
+    geo_session = models.CharField(max_length=1024, blank=True, null=True)
+    auth_token = models.CharField(max_length=512, blank=True, null=True)
+    company_uid = models.CharField(max_length=128, blank=True, null=True)
+    carrier_meta_data = models.JSONField( blank=True, null=True)
+    status = models.BooleanField(default=True)
+    shipping_service_name = models.CharField(max_length=128)
+    
+    created_at = models.DateTimeField(auto_now=False, auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True, auto_now_add=False)
+
+    class CredentialType:
+        BASIC = "BASIC"
+        CLIENT_CREDENTIALS = "CLIENT_CREDENTIALS"
+        OAUTH = "OAUTH"
+        TOKEN = "TOKEN"
