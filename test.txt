@@ -1,3 +1,26 @@
 // This is a sample text file
 
 ('LCT20-GRE-36-30', 'PRM-SSA20-GRE-36-30', '3O-WKYI-UMVU', '2K-6X8X-OHES', 'NEW20-M-CHINO-TR-GRE-36-30', 'RT-SSA20-GRE-36S', 'RT-SSA20-GRE-36-30', 'LN20-GREY-36-30', 'SSA20-R1-GRE-36-30', 'SSA20-R2-GRE-36-30', 'NEW20-M-CHINO-TR-GRE-36-30', 'HBA20-R1-GRE-36-30', 'LCT20-M-CHINO-TR-GRE-36-30', 'LCT20-M-CHINO-TR-GRE-36-30', 'M-SL-GRE-36-30-SSA20', 'PZ20-CHINO-GRE-36-30', 'MR20-MENS-CHNO-TR-GRE-36-30', 'SSA20-GRE-36-30', 'M-SL-GRE-36-30-SSA20', 'AG20-M-TR-GRE-36-30', 'M-SL-GRE-36-30-SSA20', 'M-SL-GRE-36-30-SSA20', 'SRB20-M-CHINO-TR-GRE-36-30', 'JR20-LC-M-TR-GRE-36-30')
+
+# Python code to generate folder structure tree
+import os
+
+def generate_directory_tree(path, level=0):
+    """ Recursively generate a tree structure of the directory """
+    # Get a list of files and directories inside the current directory
+    items = os.listdir(path)
+    
+    # Loop through all items and print them with indentation based on the level
+    for item in items:
+        full_item_path = os.path.join(path, item)
+        
+        # Print the item with indentation to show hierarchy
+        print('  ' * level + f'|-- {item}')
+        
+        # If the item is a directory, recursively call the function to print its contents
+        if os.path.isdir(full_item_path):
+            generate_directory_tree(full_item_path, level + 1)
+
+# Replace with the path to the directory you want to create the tree from
+root_directory = '/path/to/your/directory'
+generate_directory_tree(root_directory)
